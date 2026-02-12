@@ -17,7 +17,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         .constraints([
             ratatui::layout::Constraint::Length(1),  // Tab bar
             ratatui::layout::Constraint::Min(5),     // Main content
-            ratatui::layout::Constraint::Length(6),  // Now playing
+            ratatui::layout::Constraint::Length(3),  // Now playing
         ])
         .split(area);
 

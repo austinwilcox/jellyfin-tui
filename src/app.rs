@@ -108,9 +108,6 @@ pub struct App {
     media_controls: Option<souvlaki::MediaControls>,
     media_event_rx: tokio::sync::mpsc::UnboundedReceiver<MediaEvent>,
 
-    // Visualizer
-    pub visualizer_bars: Vec<f64>,
-    visualizer_targets: Vec<f64>,
 }
 
 impl App {
@@ -188,8 +185,6 @@ impl App {
             media_controls,
             media_event_rx: media_rx,
 
-            visualizer_bars: vec![0.0; 64],
-            visualizer_targets: vec![0.0; 64],
         }
     }
 
@@ -258,7 +253,6 @@ impl App {
 
             if last_tick.elapsed() >= tick_rate {
                 last_tick = Instant::now();
-                self.update_visualizer();
             }
         }
 
@@ -1408,34 +1402,6 @@ impl App {
         let anchor = self.visual_anchor?;
         let cursor = self.current_cursor_index()?;
         Some((anchor.min(cursor), anchor.max(cursor)))
-    }
-
-    fn update_visualizer(&mut self) {
-        let active = self.player_state.playing && !self.player_state.paused;
-        let len = self.visualizer_bars.len();
-
-        // Simple pseudo-random using position as seed
-        let seed = (self.player_state.position * 1000.0) as u64;
-
-        for i in 0..len {
-            if active {
-                // Pick new random targets periodically using a hash-like function
-                let hash = seed.wrapping_mul(6364136223846793005)
-                    .wrapping_add(i as u64 * 1442695040888963407);
-                let r = ((hash >> 16) & 0xFFFF) as f64 / 65535.0;
-                // Bias toward mid-range for more natural look
-                self.visualizer_targets[i] = 0.15 + r * 0.75;
-            } else {
-                // Decay toward zero when not playing
-                self.visualizer_targets[i] = 0.0;
-            }
-
-            // Smooth interpolation toward target
-            let diff = self.visualizer_targets[i] - self.visualizer_bars[i];
-            let speed = if active { 0.3 } else { 0.15 };
-            self.visualizer_bars[i] += diff * speed;
-            self.visualizer_bars[i] = self.visualizer_bars[i].clamp(0.0, 1.0);
-        }
     }
 
     fn get_visual_selection_items(&self) -> Vec<Item> {
