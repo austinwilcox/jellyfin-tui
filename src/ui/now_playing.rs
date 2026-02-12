@@ -23,7 +23,6 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(block, area);
 
     let repeat_label = app.queue.repeat.label();
-    let shuffle_label = if app.queue.shuffle { "Shuf" } else { "" };
 
     let mut spans: Vec<Span> = if let Some(track) = app.queue.current_item() {
         let artist = track.artist_display();
@@ -73,12 +72,18 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         ));
     }
 
-    // Repeat / Shuffle
+    // Repeat / Shuffle with icons
+    let (repeat_icon, repeat_color) = match repeat_label {
+        "All" => ("🔁 All", Color::Green),
+        "One" => ("🔂 One", Color::Yellow),
+        _ => ("⏹ Off", Color::DarkGray),
+    };
     spans.push(Span::raw("  "));
-    spans.push(Span::styled(repeat_label, Style::default().fg(Color::DarkGray)));
-    if !shuffle_label.is_empty() {
+    spans.push(Span::styled(repeat_icon, Style::default().fg(repeat_color)));
+
+    if app.queue.shuffle {
         spans.push(Span::raw(" "));
-        spans.push(Span::styled(shuffle_label, Style::default().fg(Color::DarkGray)));
+        spans.push(Span::styled("🔀 Shuf", Style::default().fg(Color::Green)));
     }
 
     let line = Line::from(spans);

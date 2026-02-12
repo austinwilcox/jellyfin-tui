@@ -482,8 +482,8 @@ impl App {
     async fn handle_library_key(&mut self, key: KeyEvent) {
         match self.focus {
             Focus::Artists => match key.code {
-                KeyCode::Char('j') => self.move_artist_selection(1),
-                KeyCode::Char('k') => self.move_artist_selection(-1),
+                KeyCode::Char('j') | KeyCode::Down => self.move_artist_selection(1),
+                KeyCode::Char('k') | KeyCode::Up => self.move_artist_selection(-1),
                 KeyCode::Char('g') => self.jump_artist_selection(true),
                 KeyCode::Char('G') => self.jump_artist_selection(false),
                 KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
@@ -492,7 +492,7 @@ impl App {
                 KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                     self.half_page_artist(false);
                 }
-                KeyCode::Char('l') | KeyCode::Enter => {
+                KeyCode::Char('l') | KeyCode::Right | KeyCode::Enter => {
                     self.select_artist().await;
                     self.focus = Focus::Albums;
                 }
@@ -509,8 +509,8 @@ impl App {
                 _ => {}
             },
             Focus::Albums => match key.code {
-                KeyCode::Char('j') => self.move_album_selection(1),
-                KeyCode::Char('k') => self.move_album_selection(-1),
+                KeyCode::Char('j') | KeyCode::Down => self.move_album_selection(1),
+                KeyCode::Char('k') | KeyCode::Up => self.move_album_selection(-1),
                 KeyCode::Char('g') => {
                     // +1 for "All Tracks" entry
                     if !self.albums.is_empty() || self.selected_artist_name.is_some() {
@@ -533,18 +533,18 @@ impl App {
                     let half = (len / 2).max(1) as i32;
                     self.move_album_selection(-half);
                 }
-                KeyCode::Char('h') => {
+                KeyCode::Char('h') | KeyCode::Left => {
                     self.focus = Focus::Artists;
                 }
-                KeyCode::Char('l') | KeyCode::Enter => {
+                KeyCode::Char('l') | KeyCode::Right | KeyCode::Enter => {
                     self.select_album().await;
                     self.focus = Focus::Tracks;
                 }
                 _ => {}
             },
             Focus::Tracks => match key.code {
-                KeyCode::Char('j') => self.move_track_selection(1),
-                KeyCode::Char('k') => self.move_track_selection(-1),
+                KeyCode::Char('j') | KeyCode::Down => self.move_track_selection(1),
+                KeyCode::Char('k') | KeyCode::Up => self.move_track_selection(-1),
                 KeyCode::Char('g') => {
                     if !self.tracks.is_empty() {
                         self.track_state.select(Some(0));
@@ -563,7 +563,7 @@ impl App {
                     let half = (self.tracks.len() / 2).max(1) as i32;
                     self.move_track_selection(-half);
                 }
-                KeyCode::Char('h') => {
+                KeyCode::Char('h') | KeyCode::Left => {
                     self.focus = Focus::Albums;
                 }
                 KeyCode::Enter => {
@@ -586,14 +586,14 @@ impl App {
             KeyCode::Char('/') | KeyCode::Char('i') => {
                 self.search_focused = true;
             }
-            KeyCode::Char('j') => {
+            KeyCode::Char('j') | KeyCode::Down => {
                 let len = self.search_results.len();
                 if len > 0 {
                     let i = self.search_state.selected().unwrap_or(0);
                     self.search_state.select(Some((i + 1).min(len - 1)));
                 }
             }
-            KeyCode::Char('k') => {
+            KeyCode::Char('k') | KeyCode::Up => {
                 let i = self.search_state.selected().unwrap_or(0);
                 self.search_state.select(Some(i.saturating_sub(1)));
             }
@@ -620,13 +620,13 @@ impl App {
     fn handle_queue_key(&mut self, key: KeyEvent) {
         let len = self.queue.items.len();
         match key.code {
-            KeyCode::Char('j') => {
+            KeyCode::Char('j') | KeyCode::Down => {
                 if len > 0 {
                     let i = self.queue_state.selected().unwrap_or(0);
                     self.queue_state.select(Some((i + 1).min(len - 1)));
                 }
             }
-            KeyCode::Char('k') => {
+            KeyCode::Char('k') | KeyCode::Up => {
                 let i = self.queue_state.selected().unwrap_or(0);
                 self.queue_state.select(Some(i.saturating_sub(1)));
             }
@@ -1014,13 +1014,13 @@ impl App {
     fn handle_recent_key(&mut self, key: KeyEvent) {
         let len = self.recent_tracks.len();
         match key.code {
-            KeyCode::Char('j') => {
+            KeyCode::Char('j') | KeyCode::Down => {
                 if len > 0 {
                     let i = self.recent_state.selected().unwrap_or(0);
                     self.recent_state.select(Some((i + 1).min(len - 1)));
                 }
             }
-            KeyCode::Char('k') => {
+            KeyCode::Char('k') | KeyCode::Up => {
                 let i = self.recent_state.selected().unwrap_or(0);
                 self.recent_state.select(Some(i.saturating_sub(1)));
             }
@@ -1116,14 +1116,14 @@ impl App {
     async fn handle_playlists_key(&mut self, key: KeyEvent) {
         match self.focus {
             Focus::Playlists => match key.code {
-                KeyCode::Char('j') => {
+                KeyCode::Char('j') | KeyCode::Down => {
                     let len = self.playlists.len();
                     if len > 0 {
                         let i = self.playlist_state.selected().unwrap_or(0);
                         self.playlist_state.select(Some((i + 1).min(len - 1)));
                     }
                 }
-                KeyCode::Char('k') => {
+                KeyCode::Char('k') | KeyCode::Up => {
                     let i = self.playlist_state.selected().unwrap_or(0);
                     self.playlist_state.select(Some(i.saturating_sub(1)));
                 }
@@ -1137,7 +1137,7 @@ impl App {
                         self.playlist_state.select(Some(self.playlists.len() - 1));
                     }
                 }
-                KeyCode::Enter | KeyCode::Char('l') => {
+                KeyCode::Enter | KeyCode::Char('l') | KeyCode::Right => {
                     if let Some(idx) = self.playlist_state.selected() {
                         if let Some(pl) = self.playlists.get(idx) {
                             self.selected_playlist_id = Some(pl.id.clone());
@@ -1179,14 +1179,14 @@ impl App {
                 _ => {}
             },
             Focus::PlaylistTracks => match key.code {
-                KeyCode::Char('j') => {
+                KeyCode::Char('j') | KeyCode::Down => {
                     let len = self.playlist_tracks.len();
                     if len > 0 {
                         let i = self.playlist_track_state.selected().unwrap_or(0);
                         self.playlist_track_state.select(Some((i + 1).min(len - 1)));
                     }
                 }
-                KeyCode::Char('k') => {
+                KeyCode::Char('k') | KeyCode::Up => {
                     let i = self.playlist_track_state.selected().unwrap_or(0);
                     self.playlist_track_state.select(Some(i.saturating_sub(1)));
                 }
@@ -1200,7 +1200,7 @@ impl App {
                         self.playlist_track_state.select(Some(self.playlist_tracks.len() - 1));
                     }
                 }
-                KeyCode::Char('h') => {
+                KeyCode::Char('h') | KeyCode::Left => {
                     self.focus = Focus::Playlists;
                 }
                 KeyCode::Enter => {
@@ -1292,14 +1292,14 @@ impl App {
                 self.add_to_playlist_popup = false;
                 self.add_to_playlist_items.clear();
             }
-            KeyCode::Char('j') => {
+            KeyCode::Char('j') | KeyCode::Down => {
                 let len = self.playlists.len();
                 if len > 0 {
                     let i = self.add_to_playlist_state.selected().unwrap_or(0);
                     self.add_to_playlist_state.select(Some((i + 1).min(len - 1)));
                 }
             }
-            KeyCode::Char('k') => {
+            KeyCode::Char('k') | KeyCode::Up => {
                 let i = self.add_to_playlist_state.selected().unwrap_or(0);
                 self.add_to_playlist_state.select(Some(i.saturating_sub(1)));
             }
