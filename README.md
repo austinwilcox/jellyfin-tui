@@ -35,6 +35,15 @@ You also need Rust installed. If you don't have it:
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
+### Raspberry Pi (Pi 4 / Pi 5)
+
+```bash
+sudo apt install libmpv-dev libdbus-1-dev libssl-dev pkg-config build-essential
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+Note: the first build will be slow on a Pi. Use `cargo build --release` for a faster binary.
+
 ### Arch Linux
 
 ```bash

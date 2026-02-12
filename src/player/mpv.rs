@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use libmpv2::{events::Event as MpvEvent, events::EventContext, mpv_end_file_reason, Mpv};
+use std::process::Command;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
@@ -30,6 +31,7 @@ pub struct PlayerState {
     pub position: f64,
     pub duration: f64,
     pub volume: i64,
+    pub system_volume: Option<i64>,
     pub finished: bool,
 }
 
@@ -41,9 +43,44 @@ impl Default for PlayerState {
             position: 0.0,
             duration: 0.0,
             volume: 80,
+            system_volume: None,
             finished: false,
         }
     }
+}
+
+#[cfg(target_os = "macos")]
+fn read_system_volume() -> Option<i64> {
+    let output = Command::new("osascript")
+        .args(["-e", "output volume of (get volume settings)"])
+        .output()
+        .ok()?;
+    let s = String::from_utf8_lossy(&output.stdout);
+    s.trim().parse::<i64>().ok()
+}
+
+#[cfg(target_os = "linux")]
+fn read_system_volume() -> Option<i64> {
+    let output = Command::new("pactl")
+        .args(["get-sink-volume", "@DEFAULT_SINK@"])
+        .output()
+        .ok()?;
+    let s = String::from_utf8_lossy(&output.stdout);
+    // Parse "Volume: front-left: 65536 / 100% / ..."
+    for part in s.split('/') {
+        let trimmed = part.trim();
+        if let Some(pct) = trimmed.strip_suffix('%') {
+            if let Ok(v) = pct.trim().parse::<i64>() {
+                return Some(v.clamp(0, 100));
+            }
+        }
+    }
+    None
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+fn read_system_volume() -> Option<i64> {
+    None
 }
 
 pub fn spawn_player_thread(
@@ -72,6 +109,8 @@ fn run_player(
     let mut state = PlayerState::default();
     let mut ev_ctx = EventContext::new(mpv.ctx.clone());
     ev_ctx.enable_all_events().map_err(mpv_err)?;
+
+    let mut sys_vol_tick: u32 = 0;
 
     loop {
         // Process commands (non-blocking)
@@ -145,12 +184,22 @@ fn run_player(
             }
         }
 
-        // Update position/duration from mpv properties
+        // Update position/duration/volume from mpv properties
         if let Ok(pos) = mpv.get_property::<f64>("time-pos") {
             state.position = pos;
         }
         if let Ok(dur) = mpv.get_property::<f64>("duration") {
             state.duration = dur;
+        }
+        if let Ok(vol) = mpv.get_property::<i64>("volume") {
+            state.volume = vol;
+        }
+
+        // Read system volume every ~2 seconds (40 * 50ms)
+        sys_vol_tick += 1;
+        if sys_vol_tick >= 40 {
+            sys_vol_tick = 0;
+            state.system_volume = read_system_volume();
         }
 
         // Send state update
