@@ -194,6 +194,8 @@ impl App {
 
         let tick_rate = Duration::from_millis(100);
         let mut last_tick = Instant::now();
+        let mut last_keepalive = Instant::now();
+        let keepalive_interval = Duration::from_secs(5 * 60); // 5 minutes
 
         while self.running {
             // Draw
@@ -253,6 +255,12 @@ impl App {
 
             if last_tick.elapsed() >= tick_rate {
                 last_tick = Instant::now();
+            }
+
+            // Periodic keepalive ping to prevent session expiration
+            if last_keepalive.elapsed() >= keepalive_interval {
+                last_keepalive = Instant::now();
+                let _ = self.client.ping().await;
             }
         }
 

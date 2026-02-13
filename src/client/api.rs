@@ -246,6 +246,17 @@ impl JellyfinClient {
         Ok(())
     }
 
+    /// Lightweight authenticated ping to keep the session alive.
+    pub async fn ping(&self) -> Result<()> {
+        let url = format!("{}/System/Info", self.base_url);
+        self.client
+            .get(&url)
+            .header("Authorization", self.auth_header())
+            .send()
+            .await?;
+        Ok(())
+    }
+
     pub fn stream_url(&self, item_id: &str) -> String {
         format!(
             "{}/Audio/{}/stream?static=true&api_key={}",

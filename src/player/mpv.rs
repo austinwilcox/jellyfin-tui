@@ -117,12 +117,17 @@ fn run_player(
         while let Ok(cmd) = cmd_rx.try_recv() {
             match cmd {
                 PlayerCommand::Play(url) => {
-                    mpv.command("loadfile", &[&url, "replace"])
-                        .map_err(mpv_err)?;
-                    state.playing = true;
-                    state.paused = false;
-                    state.finished = false;
-                    state.position = 0.0;
+                    match mpv.command("loadfile", &[&url, "replace"]) {
+                        Ok(_) => {
+                            state.playing = true;
+                            state.paused = false;
+                            state.finished = false;
+                            state.position = 0.0;
+                        }
+                        Err(e) => {
+                            eprintln!("mpv loadfile error: {e}");
+                        }
+                    }
                 }
                 PlayerCommand::Pause => {
                     mpv.set_property("pause", true).map_err(mpv_err)?;
