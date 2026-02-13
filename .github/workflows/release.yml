@@ -14,8 +14,6 @@ jobs:
             asset: jellyfin-tui-linux-x86_64.tar.gz
           - os: macos-latest
             asset: jellyfin-tui-macos-aarch64.tar.gz
-          - os: macos-13
-            asset: jellyfin-tui-macos-x86_64.tar.gz
 
     runs-on: ${{ matrix.os }}
 
