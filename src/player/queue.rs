@@ -173,6 +173,13 @@ impl Queue {
         let mut rng = rand::thread_rng();
         self.shuffle_order = (0..self.items.len()).collect();
         self.shuffle_order.shuffle(&mut rng);
+
+        // Move current track to front so we traverse the full list from here
+        if let Some(cur) = self.current {
+            if let Some(pos) = self.shuffle_order.iter().position(|&x| x == cur) {
+                self.shuffle_order.swap(0, pos);
+            }
+        }
     }
 
     fn next_shuffle_index(&self, current: usize) -> usize {
