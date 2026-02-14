@@ -108,6 +108,11 @@ pub struct App {
     media_controls: Option<souvlaki::MediaControls>,
     media_event_rx: tokio::sync::mpsc::UnboundedReceiver<MediaEvent>,
 
+    // Scroll state for marquee text effect
+    pub scroll_tick: u16,
+    scroll_tab: Tab,
+    scroll_focus: Focus,
+    scroll_selected: usize,
 }
 
 impl App {
@@ -185,6 +190,10 @@ impl App {
             media_controls,
             media_event_rx: media_rx,
 
+            scroll_tick: 0,
+            scroll_tab: Tab::Library,
+            scroll_focus: Focus::Artists,
+            scroll_selected: 0,
         }
     }
 
@@ -255,6 +264,20 @@ impl App {
 
             if last_tick.elapsed() >= tick_rate {
                 last_tick = Instant::now();
+
+                // Update scroll state for marquee text effect
+                let cur_selected = self.current_selected_index();
+                if self.active_tab != self.scroll_tab
+                    || self.focus != self.scroll_focus
+                    || cur_selected != self.scroll_selected
+                {
+                    self.scroll_tick = 0;
+                    self.scroll_tab = self.active_tab;
+                    self.scroll_focus = self.focus;
+                    self.scroll_selected = cur_selected;
+                } else {
+                    self.scroll_tick = self.scroll_tick.saturating_add(1);
+                }
             }
 
             // Periodic keepalive ping to prevent session expiration
@@ -1377,6 +1400,27 @@ impl App {
                     None
                 }
             }
+        }
+    }
+
+    /// Returns the selected index for the currently focused panel (for scroll tracking).
+    fn current_selected_index(&self) -> usize {
+        match self.active_tab {
+            Tab::Library => match self.focus {
+                Focus::Artists => self.artist_state.selected().unwrap_or(0),
+                Focus::Albums => self.album_state.selected().unwrap_or(0),
+                Focus::Tracks => self.track_state.selected().unwrap_or(0),
+                Focus::QueuePanel => self.queue_state.selected().unwrap_or(0),
+                _ => 0,
+            },
+            Tab::Search => self.search_state.selected().unwrap_or(0),
+            Tab::Queue => self.queue_state.selected().unwrap_or(0),
+            Tab::Recent => self.recent_state.selected().unwrap_or(0),
+            Tab::Playlists => match self.focus {
+                Focus::Playlists => self.playlist_state.selected().unwrap_or(0),
+                Focus::PlaylistTracks => self.playlist_track_state.selected().unwrap_or(0),
+                _ => 0,
+            },
         }
     }
 

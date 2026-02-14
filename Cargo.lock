@@ -798,6 +798,7 @@ dependencies = [
  "souvlaki",
  "tokio",
  "toml",
+ "unicode-width 0.2.0",
  "uuid",
 ]
 

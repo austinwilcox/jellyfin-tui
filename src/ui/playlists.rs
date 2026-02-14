@@ -5,6 +5,7 @@ use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use ratatui::Frame;
 
 use crate::app::{App, Focus};
+use crate::ui::scroll;
 
 pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
@@ -24,10 +25,13 @@ fn render_playlist_list(frame: &mut Frame, app: &mut App, area: Rect) {
         Style::default().fg(Color::DarkGray)
     };
 
+    let selected_idx = app.playlist_state.selected();
+    let available_width = area.width.saturating_sub(4);
     let items: Vec<ListItem> = app
         .playlists
         .iter()
-        .map(|pl| {
+        .enumerate()
+        .map(|(i, pl)| {
             let style = if app.selected_playlist_id.as_deref() == Some(&pl.id) {
                 Style::default()
                     .fg(Color::Cyan)
@@ -35,7 +39,12 @@ fn render_playlist_list(frame: &mut Frame, app: &mut App, area: Rect) {
             } else {
                 Style::default()
             };
-            ListItem::new(Span::styled(pl.name.clone(), style))
+            let line = Line::from(Span::styled(pl.name.clone(), style));
+            if focused && selected_idx == Some(i) {
+                ListItem::new(scroll::scroll_line(line, available_width, app.scroll_tick))
+            } else {
+                ListItem::new(line)
+            }
         })
         .collect();
 
@@ -70,6 +79,8 @@ fn render_playlist_tracks(frame: &mut Frame, app: &mut App, area: Rect) {
         Style::default().fg(Color::DarkGray)
     };
 
+    let selected_idx = app.playlist_track_state.selected();
+    let available_width = area.width.saturating_sub(4);
     let visual_range = if focused { app.visual_selection_range() } else { None };
     let items: Vec<ListItem> = app
         .playlist_tracks
@@ -108,7 +119,11 @@ fn render_playlist_tracks(frame: &mut Frame, app: &mut App, area: Rect) {
                 Span::styled(format!("  {album}"), dim),
                 Span::styled(format!("  {dur}"), dim),
             ]);
-            ListItem::new(line)
+            if focused && selected_idx == Some(i) {
+                ListItem::new(scroll::scroll_line(line, available_width, app.scroll_tick))
+            } else {
+                ListItem::new(line)
+            }
         })
         .collect();
 

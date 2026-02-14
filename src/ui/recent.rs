@@ -5,8 +5,11 @@ use ratatui::widgets::{Block, Borders, List, ListItem};
 use ratatui::Frame;
 
 use crate::app::App;
+use crate::ui::scroll;
 
 pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
+    let selected_idx = app.recent_state.selected();
+    let available_width = area.width.saturating_sub(4);
     let visual_range = app.visual_selection_range();
     let items: Vec<ListItem> = app
         .recent_tracks
@@ -74,7 +77,12 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
                 spans.push(Span::styled(format!("  {date_added}"), dim));
             }
 
-            ListItem::new(Line::from(spans))
+            let line = Line::from(spans);
+            if selected_idx == Some(i) {
+                ListItem::new(scroll::scroll_line(line, available_width, app.scroll_tick))
+            } else {
+                ListItem::new(line)
+            }
         })
         .collect();
 

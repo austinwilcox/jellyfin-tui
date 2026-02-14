@@ -3,6 +3,7 @@ pub mod library;
 pub mod now_playing;
 pub mod playlists;
 pub mod recent;
+pub mod scroll;
 pub mod search;
 
 use ratatui::Frame;

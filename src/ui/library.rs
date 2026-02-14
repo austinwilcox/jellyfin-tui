@@ -5,6 +5,7 @@ use ratatui::widgets::{Block, Borders, List, ListItem};
 use ratatui::Frame;
 
 use crate::app::{App, Focus};
+use crate::ui::scroll;
 
 pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
@@ -31,10 +32,13 @@ fn render_artists(frame: &mut Frame, app: &mut App, area: Rect) {
         Style::default().fg(Color::DarkGray)
     };
 
+    let selected_idx = app.artist_state.selected();
+    let available_width = area.width.saturating_sub(4); // 2 border + 2 highlight symbol
     let items: Vec<ListItem> = app
         .filtered_artists()
         .iter()
-        .map(|a| {
+        .enumerate()
+        .map(|(i, a)| {
             let style = if Some(&a.id) == app.selected_artist_id().as_ref() {
                 Style::default()
                     .fg(Color::Cyan)
@@ -42,7 +46,12 @@ fn render_artists(frame: &mut Frame, app: &mut App, area: Rect) {
             } else {
                 Style::default()
             };
-            ListItem::new(Span::styled(a.name.clone(), style))
+            let line = Line::from(Span::styled(a.name.clone(), style));
+            if focused && selected_idx == Some(i) {
+                ListItem::new(scroll::scroll_line(line, available_width, app.scroll_tick))
+            } else {
+                ListItem::new(line)
+            }
         })
         .collect();
 
@@ -77,14 +86,23 @@ fn render_albums(frame: &mut Frame, app: &mut App, area: Rect) {
         Style::default().fg(Color::DarkGray)
     };
 
+    let selected_idx = app.album_state.selected();
+    let available_width = area.width.saturating_sub(4);
     let mut items: Vec<ListItem> = Vec::new();
+    let mut item_index = 0usize;
 
     // "All Tracks" entry at index 0
     if app.selected_artist_name.is_some() {
-        items.push(ListItem::new(Span::styled(
+        let line = Line::from(Span::styled(
             "♪ All Tracks",
             Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
-        )));
+        ));
+        if focused && selected_idx == Some(item_index) {
+            items.push(ListItem::new(scroll::scroll_line(line, available_width, app.scroll_tick)));
+        } else {
+            items.push(ListItem::new(line));
+        }
+        item_index += 1;
     }
 
     // Album entries
@@ -100,10 +118,16 @@ fn render_albums(frame: &mut Frame, app: &mut App, area: Rect) {
         } else {
             Style::default()
         };
-        items.push(ListItem::new(Line::from(vec![
+        let line = Line::from(vec![
             Span::styled(album.name.clone(), style),
             Span::styled(year, Style::default().fg(Color::DarkGray)),
-        ])));
+        ]);
+        if focused && selected_idx == Some(item_index) {
+            items.push(ListItem::new(scroll::scroll_line(line, available_width, app.scroll_tick)));
+        } else {
+            items.push(ListItem::new(line));
+        }
+        item_index += 1;
     }
 
     let title = if let Some(ref name) = app.selected_artist_name {
@@ -137,6 +161,8 @@ fn render_tracks(frame: &mut Frame, app: &mut App, area: Rect) {
         Style::default().fg(Color::DarkGray)
     };
 
+    let selected_idx = app.track_state.selected();
+    let available_width = area.width.saturating_sub(4);
     let visual_range = if focused { app.visual_selection_range() } else { None };
     let items: Vec<ListItem> = app
         .tracks
@@ -175,7 +201,11 @@ fn render_tracks(frame: &mut Frame, app: &mut App, area: Rect) {
                 Span::raw("  "),
                 Span::styled(dur, dim),
             ]);
-            ListItem::new(line)
+            if focused && selected_idx == Some(i) {
+                ListItem::new(scroll::scroll_line(line, available_width, app.scroll_tick))
+            } else {
+                ListItem::new(line)
+            }
         })
         .collect();
 
@@ -227,6 +257,8 @@ fn render_queue_list(frame: &mut Frame, app: &mut App, area: Rect, focused: bool
         Style::default().fg(Color::DarkGray)
     };
 
+    let selected_idx = app.queue_state.selected();
+    let available_width = area.width.saturating_sub(4);
     let items: Vec<ListItem> = app
         .queue
         .items
@@ -251,7 +283,11 @@ fn render_queue_list(frame: &mut Frame, app: &mut App, area: Rect, focused: bool
                 Span::raw("  "),
                 Span::styled(dur, Style::default().fg(Color::DarkGray)),
             ]);
-            ListItem::new(line)
+            if focused && selected_idx == Some(i) {
+                ListItem::new(scroll::scroll_line(line, available_width, app.scroll_tick))
+            } else {
+                ListItem::new(line)
+            }
         })
         .collect();
 

@@ -5,6 +5,7 @@ use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use ratatui::Frame;
 
 use crate::app::App;
+use crate::ui::scroll;
 
 pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
@@ -24,10 +25,14 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
     frame.render_widget(input_text, chunks[0]);
 
     // Search results
+    let selected_idx = app.search_state.selected();
+    let focused = !app.search_focused;
+    let available_width = chunks[1].width.saturating_sub(4);
     let items: Vec<ListItem> = app
         .search_results
         .iter()
-        .map(|item| {
+        .enumerate()
+        .map(|(i, item)| {
             let type_label = match item.item_type.as_deref() {
                 Some("MusicArtist") => "[Artist]",
                 Some("MusicAlbum") => "[Album] ",
@@ -64,7 +69,11 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
                 ),
                 Span::styled(extra, Style::default().fg(Color::DarkGray)),
             ]);
-            ListItem::new(line)
+            if focused && selected_idx == Some(i) {
+                ListItem::new(scroll::scroll_line(line, available_width, app.scroll_tick))
+            } else {
+                ListItem::new(line)
+            }
         })
         .collect();
 
