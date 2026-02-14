@@ -13,7 +13,10 @@ Browse your library, search for music, manage playlists, and control playback en
 - **Playlists** -- Full CRUD: create, browse, add/remove tracks, delete playlists
 - **Add-to-playlist popup** -- Press `a` from any tab to add the selected track to a playlist
 - **Media key support** -- Play/pause/next/previous from headphones and keyboard media keys via MPRIS (Linux) and MediaPlayer framework (macOS)
-- **Now playing bar** -- Always-visible progress bar with track info, time, volume, and repeat/shuffle status
+- **Now playing bar** -- Always-visible bar with track info, time, codec/bitrate (e.g. `FLAC @ 1411 kbps`), volume, and repeat/shuffle status
+- **Scrolling text** -- Long track/artist names scroll automatically when they don't fit in the available space
+- **Multi-server support** -- Configure multiple Jellyfin servers and switch between them
+- **Session keep-alive** -- Automatically keeps the server session alive during long listening sessions
 
 ## Dependencies
 
@@ -70,15 +73,29 @@ Username:
 Password:
 ```
 
-Configuration is stored at `~/.config/jellyfin-tui/config.toml`:
+Configuration is stored at `~/.config/jellyfin-tui/config.toml`. After initial authentication, the app stores a session token and will reuse it on subsequent launches.
+
+### Multi-server
+
+You can configure multiple servers. On launch, you'll be prompted to pick one:
 
 ```toml
-server_url = "http://localhost:8096"
-username = "your_username"
-password = "your_password"
+active = "home"
+
+[[servers]]
+name = "home"
+server_url = "http://192.168.1.10:8096"
+username = "alice"
+password = "password"
+
+[[servers]]
+name = "remote"
+server_url = "https://jellyfin.example.com"
+username = "alice"
+password = "password"
 ```
 
-After initial authentication, the app stores a session token and will reuse it on subsequent launches.
+Old single-server configs are automatically migrated to the new format.
 
 ## Usage
 
