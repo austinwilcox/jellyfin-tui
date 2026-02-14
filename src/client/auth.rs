@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use reqwest::Client;
 
 use crate::client::models::AuthResponse;
-use crate::config::{save_config, Config};
+use crate::config::{save_server_config, Config};
 
 const DEVICE_NAME: &str = "jellyfin-tui";
 const DEVICE_ID: &str = "jellyfin-tui-rust";
@@ -19,7 +19,7 @@ pub fn media_browser_header(token: Option<&str>) -> String {
     header
 }
 
-pub async fn authenticate(config: &mut Config) -> Result<()> {
+pub async fn authenticate(config: &mut Config, server_name: &str) -> Result<()> {
     // If we already have a valid token, try it first
     if let (Some(ref token), Some(ref user_id)) = (&config.token, &config.user_id) {
         let client = Client::new();
@@ -61,7 +61,7 @@ pub async fn authenticate(config: &mut Config) -> Result<()> {
     let auth: AuthResponse = resp.json().await.context("Failed to parse auth response")?;
     config.token = Some(auth.access_token);
     config.user_id = Some(auth.user.id);
-    save_config(config)?;
+    save_server_config(server_name, config)?;
 
     Ok(())
 }
