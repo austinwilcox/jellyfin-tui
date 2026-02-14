@@ -283,7 +283,16 @@ impl App {
             // Periodic keepalive ping to prevent session expiration
             if last_keepalive.elapsed() >= keepalive_interval {
                 last_keepalive = Instant::now();
-                let _ = self.client.ping().await;
+                if self.client.ping().await.is_err() {
+                    match self.client.re_authenticate().await {
+                        Ok(()) => {
+                            self.status_message = Some("Session refreshed".to_string());
+                        }
+                        Err(e) => {
+                            self.status_message = Some(format!("Re-auth failed: {e}"));
+                        }
+                    }
+                }
             }
         }
 

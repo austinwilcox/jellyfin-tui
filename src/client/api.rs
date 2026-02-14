@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use reqwest::Client;
 
 use crate::client::auth::media_browser_header;
-use crate::client::models::{CreatePlaylistRequest, Item, ItemsResponse, PlaylistCreationResult};
+use crate::client::models::{AuthResponse, CreatePlaylistRequest, Item, ItemsResponse, PlaylistCreationResult};
 use crate::config::Config;
 
 #[derive(Clone)]
@@ -11,6 +11,8 @@ pub struct JellyfinClient {
     pub base_url: String,
     pub token: String,
     pub user_id: String,
+    username: String,
+    password: String,
     music_library_id: Option<String>,
 }
 
@@ -23,8 +25,38 @@ impl JellyfinClient {
             base_url: config.server_url.clone(),
             token,
             user_id,
+            username: config.username.clone(),
+            password: config.password.clone(),
             music_library_id: None,
         })
+    }
+
+    pub async fn re_authenticate(&mut self) -> Result<()> {
+        let body = serde_json::json!({
+            "Username": self.username,
+            "Pw": self.password
+        });
+
+        let resp = self
+            .client
+            .post(format!("{}/Users/AuthenticateByName", self.base_url))
+            .header("Authorization", media_browser_header(None))
+            .header("Content-Type", "application/json")
+            .json(&body)
+            .send()
+            .await
+            .context("Failed to connect to Jellyfin server")?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let text = resp.text().await.unwrap_or_default();
+            bail!("Re-authentication failed (HTTP {status}): {text}");
+        }
+
+        let auth: AuthResponse = resp.json().await.context("Failed to parse auth response")?;
+        self.token = auth.access_token;
+        self.user_id = auth.user.id;
+        Ok(())
     }
 
     fn auth_header(&self) -> String {
