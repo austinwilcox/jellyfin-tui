@@ -94,7 +94,7 @@ impl JellyfinClient {
 
     pub async fn get_artist_tracks(&self, artist_id: &str) -> Result<Vec<Item>> {
         let url = format!(
-            "{}/Users/{}/Items?ArtistIds={}&IncludeItemTypes=Audio&Recursive=true&SortBy=Album,ParentIndexNumber,IndexNumber&SortOrder=Ascending&Fields=Artists,Album,RunTimeTicks,IndexNumber,ParentIndexNumber,AlbumArtist,ProductionYear,AlbumId",
+            "{}/Users/{}/Items?ArtistIds={}&IncludeItemTypes=Audio&Recursive=true&SortBy=Album,ParentIndexNumber,IndexNumber&SortOrder=Ascending&Fields=Artists,Album,RunTimeTicks,IndexNumber,ParentIndexNumber,AlbumArtist,ProductionYear,AlbumId,MediaSources",
             self.base_url, self.user_id, artist_id
         );
         let data: ItemsResponse = self
@@ -110,7 +110,7 @@ impl JellyfinClient {
 
     pub async fn get_album_tracks(&self, album_id: &str) -> Result<Vec<Item>> {
         let url = format!(
-            "{}/Users/{}/Items?ParentId={}&IncludeItemTypes=Audio&Recursive=true&SortBy=ParentIndexNumber,IndexNumber&SortOrder=Ascending&Fields=Artists,Album,RunTimeTicks,IndexNumber,ParentIndexNumber,AlbumArtist",
+            "{}/Users/{}/Items?ParentId={}&IncludeItemTypes=Audio&Recursive=true&SortBy=ParentIndexNumber,IndexNumber&SortOrder=Ascending&Fields=Artists,Album,RunTimeTicks,IndexNumber,ParentIndexNumber,AlbumArtist,MediaSources",
             self.base_url, self.user_id, album_id
         );
         let data: ItemsResponse = self
@@ -126,7 +126,7 @@ impl JellyfinClient {
 
     pub async fn search(&self, query: &str) -> Result<Vec<Item>> {
         let url = format!(
-            "{}/Users/{}/Items?SearchTerm={}&IncludeItemTypes=MusicArtist,MusicAlbum,Audio&Recursive=true&Limit=50&Fields=Artists,Album,RunTimeTicks,IndexNumber,AlbumArtist,ProductionYear",
+            "{}/Users/{}/Items?SearchTerm={}&IncludeItemTypes=MusicArtist,MusicAlbum,Audio&Recursive=true&Limit=50&Fields=Artists,Album,RunTimeTicks,IndexNumber,AlbumArtist,ProductionYear,MediaSources",
             self.base_url, self.user_id,
             urlencoding(query)
         );
@@ -143,7 +143,7 @@ impl JellyfinClient {
 
     pub async fn get_recent_tracks(&self, limit: u32) -> Result<Vec<Item>> {
         let url = format!(
-            "{}/Users/{}/Items?IncludeItemTypes=Audio&SortBy=DateCreated&SortOrder=Descending&Recursive=true&Limit={}&Fields=Artists,Album,RunTimeTicks,IndexNumber,AlbumArtist,ProductionYear,Genres,DateCreated",
+            "{}/Users/{}/Items?IncludeItemTypes=Audio&SortBy=DateCreated&SortOrder=Descending&Recursive=true&Limit={}&Fields=Artists,Album,RunTimeTicks,IndexNumber,AlbumArtist,ProductionYear,Genres,DateCreated,MediaSources",
             self.base_url, self.user_id, limit
         );
         let data: ItemsResponse = self
@@ -175,7 +175,7 @@ impl JellyfinClient {
 
     pub async fn get_playlist_tracks(&self, playlist_id: &str) -> Result<Vec<Item>> {
         let url = format!(
-            "{}/Playlists/{}/Items?userId={}&Fields=Artists,Album,RunTimeTicks,IndexNumber,AlbumArtist,ProductionYear,Genres",
+            "{}/Playlists/{}/Items?userId={}&Fields=Artists,Album,RunTimeTicks,IndexNumber,AlbumArtist,ProductionYear,Genres,MediaSources",
             self.base_url, playlist_id, self.user_id
         );
         let data: ItemsResponse = self

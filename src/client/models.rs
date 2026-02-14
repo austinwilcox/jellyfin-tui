@@ -1,5 +1,14 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct MediaSource {
+    #[serde(default)]
+    pub container: Option<String>,
+    #[serde(default)]
+    pub bitrate: Option<u64>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct AuthResponse {
@@ -59,6 +68,8 @@ pub struct Item {
     pub genres: Option<Vec<String>>,
     #[serde(default)]
     pub date_created: Option<String>,
+    #[serde(default)]
+    pub media_sources: Option<Vec<MediaSource>>,
 }
 
 impl Item {
@@ -70,6 +81,13 @@ impl Item {
 
     pub fn duration_display(&self) -> String {
         format_duration(self.duration_secs())
+    }
+
+    pub fn codec_display(&self) -> Option<String> {
+        let source = self.media_sources.as_ref()?.first()?;
+        let container = source.container.as_ref()?;
+        let bitrate = source.bitrate?;
+        Some(format!("{} @ {} kbps", container.to_uppercase(), bitrate / 1000))
     }
 
     pub fn artist_display(&self) -> String {

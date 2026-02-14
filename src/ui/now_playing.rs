@@ -37,14 +37,19 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         let pause_indicator = if app.player_state.paused { " [PAUSED]" } else { "" };
         let time = format!("[{pos}/{dur}]{pause_indicator}");
 
-        vec![
+        let mut track_spans = vec![
             Span::styled(
                 info,
                 Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
             ),
             Span::raw("  "),
             Span::styled(time, Style::default().fg(Color::Yellow)),
-        ]
+        ];
+        if let Some(codec) = track.codec_display() {
+            track_spans.push(Span::raw("  "));
+            track_spans.push(Span::styled(codec, Style::default().fg(Color::DarkGray)));
+        }
+        track_spans
     } else {
         vec![Span::styled(
             "  No track playing",
