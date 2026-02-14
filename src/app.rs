@@ -866,6 +866,8 @@ impl App {
             let _ = self.player_cmd_tx.send(PlayerCommand::Play(url));
             self.queue_state.select(self.queue.current);
             self.update_media_metadata(&item);
+        } else {
+            let _ = self.player_cmd_tx.send(PlayerCommand::Stop);
         }
     }
 
