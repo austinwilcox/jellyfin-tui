@@ -1232,6 +1232,22 @@ impl App {
                     let i = self.playlist_track_state.selected().unwrap_or(0);
                     self.playlist_track_state.select(Some(i.saturating_sub(1)));
                 }
+                KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    let len = self.playlist_tracks.len();
+                    if len > 0 {
+                        let half = (len / 2).max(1);
+                        let i = self.playlist_track_state.selected().unwrap_or(0);
+                        self.playlist_track_state.select(Some((i + half).min(len - 1)));
+                    }
+                }
+                KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    let len = self.playlist_tracks.len();
+                    if len > 0 {
+                        let half = (len / 2).max(1);
+                        let i = self.playlist_track_state.selected().unwrap_or(0);
+                        self.playlist_track_state.select(Some(i.saturating_sub(half)));
+                    }
+                }
                 KeyCode::Char('g') => {
                     if !self.playlist_tracks.is_empty() {
                         self.playlist_track_state.select(Some(0));
