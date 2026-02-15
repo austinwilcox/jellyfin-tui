@@ -111,6 +111,14 @@ Or if running from the source directory:
 cargo run --release
 ```
 
+### Editing the Config
+
+To open the config file in your default editor (`$EDITOR`):
+
+```bash
+jellyfin-tui config
+```
+
 ### Tabs
 
 Switch between tabs using the number keys:
