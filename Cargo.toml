@@ -1,7 +1,8 @@
 [package]
 name = "jellyfin-tui"
-version = "0.1.0"
+version = "0.2.3"
 edition = "2021"
+license = "MIT"
 
 [dependencies]
 ratatui = "0.29"

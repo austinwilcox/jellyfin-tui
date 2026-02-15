@@ -82,8 +82,8 @@ fn render_playlist_tracks(frame: &mut Frame, app: &mut App, area: Rect) {
     let selected_idx = app.playlist_track_state.selected();
     let available_width = area.width.saturating_sub(4);
     let visual_range = if focused { app.visual_selection_range() } else { None };
-    let items: Vec<ListItem> = app
-        .playlist_tracks
+    let filtered = app.filtered_playlist_tracks();
+    let items: Vec<ListItem> = filtered
         .iter()
         .enumerate()
         .map(|(i, t)| {
@@ -129,6 +129,14 @@ fn render_playlist_tracks(frame: &mut Frame, app: &mut App, area: Rect) {
 
     let title = if let Some((s, e)) = visual_range {
         format!(" Tracks -- VISUAL {} selected ", e - s + 1)
+    } else if app.playlist_filter_active {
+        format!(" Tracks [/{}] ", app.playlist_filter_text)
+    } else if !app.playlist_filter_text.is_empty() {
+        if let Some(ref name) = app.selected_playlist_name {
+            format!(" {name} [/{}] ({}) ", app.playlist_filter_text, filtered.len())
+        } else {
+            format!(" Tracks [/{}] ({}) ", app.playlist_filter_text, filtered.len())
+        }
     } else if let Some(ref name) = app.selected_playlist_name {
         format!(" {name} ({}) ", app.playlist_tracks.len())
     } else {
