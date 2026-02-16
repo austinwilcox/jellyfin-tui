@@ -80,10 +80,9 @@ pub struct App {
     pub playlist_create_mode: bool,
     pub playlist_create_name: String,
 
-    // Playlist track filter
-    pub playlist_filter_active: bool,
-    pub playlist_filter_text: String,
-    filtered_playlist_track_indices: Vec<usize>,
+    // Playlist track search (vim-like jump)
+    pub playlist_search_active: bool,
+    pub playlist_search_text: String,
 
     // Visual selection mode
     pub visual_mode: bool,
@@ -174,9 +173,8 @@ impl App {
             playlist_create_mode: false,
             playlist_create_name: String::new(),
 
-            playlist_filter_active: false,
-            playlist_filter_text: String::new(),
-            filtered_playlist_track_indices: Vec::new(),
+            playlist_search_active: false,
+            playlist_search_text: String::new(),
 
             visual_mode: false,
             visual_anchor: None,
@@ -364,24 +362,30 @@ impl App {
             return;
         }
 
-        // Playlist track filter input mode
-        if self.playlist_filter_active {
+        // Playlist track search input mode (vim-like jump)
+        if self.playlist_search_active {
             match key.code {
                 KeyCode::Esc => {
-                    self.playlist_filter_active = false;
-                    self.playlist_filter_text.clear();
-                    self.rebuild_playlist_filter();
+                    self.playlist_search_active = false;
+                    self.playlist_search_text.clear();
                 }
                 KeyCode::Enter => {
-                    self.playlist_filter_active = false;
+                    self.playlist_search_active = false;
+                    self.playlist_search_text.clear();
+                }
+                KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.next_playlist_search_match();
+                }
+                KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.prev_playlist_search_match();
                 }
                 KeyCode::Backspace => {
-                    self.playlist_filter_text.pop();
-                    self.rebuild_playlist_filter();
+                    self.playlist_search_text.pop();
+                    self.jump_to_playlist_search();
                 }
                 KeyCode::Char(c) => {
-                    self.playlist_filter_text.push(c);
-                    self.rebuild_playlist_filter();
+                    self.playlist_search_text.push(c);
+                    self.jump_to_playlist_search();
                 }
                 _ => {}
             }
@@ -821,42 +825,55 @@ impl App {
         }
     }
 
-    pub fn filtered_playlist_tracks(&self) -> Vec<&Item> {
-        if self.playlist_filter_text.is_empty() {
-            self.playlist_tracks.iter().collect()
-        } else {
-            self.filtered_playlist_track_indices
-                .iter()
-                .filter_map(|&i| self.playlist_tracks.get(i))
-                .collect()
+    fn playlist_track_matches_query(&self, track: &Item, query: &str) -> bool {
+        track.name.to_lowercase().contains(query)
+            || track.artist_display().to_lowercase().contains(query)
+            || track.album.as_deref().unwrap_or("").to_lowercase().contains(query)
+    }
+
+    fn jump_to_playlist_search(&mut self) {
+        if self.playlist_search_text.is_empty() || self.playlist_tracks.is_empty() {
+            return;
+        }
+        let query = self.playlist_search_text.to_lowercase();
+        if let Some(idx) = self.playlist_tracks.iter().position(|t| {
+            self.playlist_track_matches_query(t, &query)
+        }) {
+            self.playlist_track_state.select(Some(idx));
         }
     }
 
-    fn rebuild_playlist_filter(&mut self) {
-        if self.playlist_filter_text.is_empty() {
-            self.filtered_playlist_track_indices = (0..self.playlist_tracks.len()).collect();
-        } else {
-            let query = self.playlist_filter_text.to_lowercase();
-            self.filtered_playlist_track_indices = self
-                .playlist_tracks
-                .iter()
-                .enumerate()
-                .filter(|(_, t)| {
-                    t.name.to_lowercase().contains(&query)
-                        || t.artist_display().to_lowercase().contains(&query)
-                        || t.album.as_deref().unwrap_or("").to_lowercase().contains(&query)
-                })
-                .map(|(i, _)| i)
-                .collect();
+    fn next_playlist_search_match(&mut self) {
+        if self.playlist_search_text.is_empty() || self.playlist_tracks.is_empty() {
+            return;
         }
-
-        if !self.filtered_playlist_track_indices.is_empty() {
-            let sel = self.playlist_track_state.selected().unwrap_or(0);
-            if sel >= self.filtered_playlist_track_indices.len() {
-                self.playlist_track_state.select(Some(0));
+        let query = self.playlist_search_text.to_lowercase();
+        let cur = self.playlist_track_state.selected().unwrap_or(0);
+        let len = self.playlist_tracks.len();
+        // Search forward from current+1, wrapping around
+        for offset in 1..=len {
+            let idx = (cur + offset) % len;
+            if self.playlist_track_matches_query(&self.playlist_tracks[idx], &query) {
+                self.playlist_track_state.select(Some(idx));
+                return;
             }
-        } else {
-            self.playlist_track_state.select(None);
+        }
+    }
+
+    fn prev_playlist_search_match(&mut self) {
+        if self.playlist_search_text.is_empty() || self.playlist_tracks.is_empty() {
+            return;
+        }
+        let query = self.playlist_search_text.to_lowercase();
+        let cur = self.playlist_track_state.selected().unwrap_or(0);
+        let len = self.playlist_tracks.len();
+        // Search backward from current-1, wrapping around
+        for offset in 1..=len {
+            let idx = (cur + len - offset) % len;
+            if self.playlist_track_matches_query(&self.playlist_tracks[idx], &query) {
+                self.playlist_track_state.select(Some(idx));
+                return;
+            }
         }
     }
 
@@ -1214,8 +1231,12 @@ impl App {
             match self.client.get_playlist_tracks(id).await {
                 Ok(tracks) => {
                     self.playlist_tracks = tracks;
-                    self.playlist_filter_text.clear();
-                    self.rebuild_playlist_filter();
+                    self.playlist_search_text.clear();
+                    self.playlist_track_state.select(if self.playlist_tracks.is_empty() {
+                        None
+                    } else {
+                        Some(0)
+                    });
                 }
                 Err(e) => {
                     self.status_message = Some(format!("Failed to load playlist tracks: {e}"));
@@ -1291,7 +1312,7 @@ impl App {
             },
             Focus::PlaylistTracks => match key.code {
                 KeyCode::Char('j') | KeyCode::Down => {
-                    let len = self.filtered_playlist_tracks().len();
+                    let len = self.playlist_tracks.len();
                     if len > 0 {
                         let i = self.playlist_track_state.selected().unwrap_or(0);
                         self.playlist_track_state.select(Some((i + 1).min(len - 1)));
@@ -1302,7 +1323,7 @@ impl App {
                     self.playlist_track_state.select(Some(i.saturating_sub(1)));
                 }
                 KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    let len = self.filtered_playlist_tracks().len();
+                    let len = self.playlist_tracks.len();
                     if len > 0 {
                         let half = (len / 2).max(1);
                         let i = self.playlist_track_state.selected().unwrap_or(0);
@@ -1310,7 +1331,7 @@ impl App {
                     }
                 }
                 KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    let len = self.filtered_playlist_tracks().len();
+                    let len = self.playlist_tracks.len();
                     if len > 0 {
                         let half = (len / 2).max(1);
                         let i = self.playlist_track_state.selected().unwrap_or(0);
@@ -1318,12 +1339,12 @@ impl App {
                     }
                 }
                 KeyCode::Char('g') => {
-                    if !self.filtered_playlist_tracks().is_empty() {
+                    if !self.playlist_tracks.is_empty() {
                         self.playlist_track_state.select(Some(0));
                     }
                 }
                 KeyCode::Char('G') => {
-                    let len = self.filtered_playlist_tracks().len();
+                    let len = self.playlist_tracks.len();
                     if len > 0 {
                         self.playlist_track_state.select(Some(len - 1));
                     }
@@ -1332,20 +1353,13 @@ impl App {
                     self.focus = Focus::Playlists;
                 }
                 KeyCode::Char('/') => {
-                    self.playlist_filter_active = true;
-                    self.playlist_filter_text.clear();
-                }
-                KeyCode::Esc => {
-                    if !self.playlist_filter_text.is_empty() {
-                        self.playlist_filter_text.clear();
-                        self.rebuild_playlist_filter();
-                    }
+                    self.playlist_search_active = true;
+                    self.playlist_search_text.clear();
                 }
                 KeyCode::Enter => {
                     if let Some(idx) = self.playlist_track_state.selected() {
-                        let tracks: Vec<Item> = self.filtered_playlist_tracks().into_iter().cloned().collect();
-                        if idx < tracks.len() {
-                            self.queue.replace(tracks, idx);
+                        if idx < self.playlist_tracks.len() {
+                            self.queue.replace(self.playlist_tracks.clone(), idx);
                             self.queue_state.select(Some(idx));
                             if let Some(item) = self.queue.current_item().cloned() {
                                 let url = self.client.stream_url(&item.id);
@@ -1357,8 +1371,7 @@ impl App {
                 }
                 KeyCode::Char('e') => {
                     if let Some(idx) = self.playlist_track_state.selected() {
-                        let track = self.filtered_playlist_tracks().get(idx).cloned().cloned();
-                        if let Some(track) = track {
+                        if let Some(track) = self.playlist_tracks.get(idx).cloned() {
                             self.queue.enqueue(track.clone());
                             self.status_message = Some(format!("Enqueued: {}", track.name));
                         }
@@ -1366,21 +1379,16 @@ impl App {
                 }
                 KeyCode::Char('d') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                     if let Some(idx) = self.playlist_track_state.selected() {
-                        let real_idx = if self.playlist_filter_text.is_empty() {
-                            idx
-                        } else if let Some(&ri) = self.filtered_playlist_track_indices.get(idx) {
-                            ri
-                        } else {
-                            return;
-                        };
                         if let Some(ref playlist_id) = self.selected_playlist_id.clone() {
-                            if let Some(track) = self.playlist_tracks.get(real_idx) {
+                            if let Some(track) = self.playlist_tracks.get(idx) {
                                 if let Some(ref entry_id) = track.playlist_item_id {
                                     match self.client.remove_from_playlist(playlist_id, &[entry_id.clone()]).await {
                                         Ok(()) => {
                                             self.status_message = Some(format!("Removed: {}", track.name));
-                                            self.playlist_tracks.remove(real_idx);
-                                            self.rebuild_playlist_filter();
+                                            self.playlist_tracks.remove(idx);
+                                            if idx >= self.playlist_tracks.len() && !self.playlist_tracks.is_empty() {
+                                                self.playlist_track_state.select(Some(self.playlist_tracks.len() - 1));
+                                            }
                                         }
                                         Err(e) => {
                                             self.status_message = Some(format!("Failed to remove track: {e}"));
@@ -1505,8 +1513,7 @@ impl App {
             }
             Tab::Playlists => {
                 if self.focus == Focus::PlaylistTracks {
-                    let filtered = self.filtered_playlist_tracks();
-                    self.playlist_track_state.selected().and_then(|i| filtered.get(i).cloned().cloned())
+                    self.playlist_track_state.selected().and_then(|i| self.playlist_tracks.get(i).cloned())
                 } else {
                     None
                 }
@@ -1576,12 +1583,9 @@ impl App {
         };
 
         if self.active_tab == Tab::Playlists && self.focus == Focus::PlaylistTracks {
-            let filtered = self.filtered_playlist_tracks();
-            return filtered.get(start..=end)
+            return self.playlist_tracks.get(start..=end)
                 .unwrap_or(&[])
-                .iter()
-                .map(|&item| item.clone())
-                .collect();
+                .to_vec();
         }
 
         let items: &[Item] = match self.active_tab {

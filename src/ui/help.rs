@@ -24,7 +24,7 @@ const HELP_TEXT: &[(&str, &str)] = &[
     ("e", "Enqueue selected track(s)"),
     ("v", "Visual select mode"),
     ("a", "Add to playlist (visual: add all)"),
-    ("/ (in library)", "Filter current list"),
+    ("/", "Filter list / search playlist"),
     ("Esc", "Clear filter / close popup"),
     ("r", "Cycle repeat mode"),
     ("s", "Toggle shuffle"),
