@@ -89,22 +89,32 @@ impl Queue {
             }
             _ => {
                 if let Some(cur) = self.current {
-                    let next = if self.shuffle {
-                        self.next_shuffle_index(cur)
-                    } else {
-                        cur + 1
-                    };
-
-                    if next >= self.items.len() {
-                        match self.repeat {
-                            RepeatMode::All => self.current = Some(0),
-                            _ => {
-                                self.current = None;
-                                return None;
-                            }
+                    if self.shuffle {
+                        match self.next_shuffle_index(cur) {
+                            Some(next) => self.current = Some(next),
+                            None => match self.repeat {
+                                RepeatMode::All => {
+                                    self.current = self.shuffle_order.first().copied();
+                                }
+                                _ => {
+                                    self.current = None;
+                                    return None;
+                                }
+                            },
                         }
                     } else {
-                        self.current = Some(next);
+                        let next = cur + 1;
+                        if next >= self.items.len() {
+                            match self.repeat {
+                                RepeatMode::All => self.current = Some(0),
+                                _ => {
+                                    self.current = None;
+                                    return None;
+                                }
+                            }
+                        } else {
+                            self.current = Some(next);
+                        }
                     }
                 } else {
                     self.current = Some(0);
@@ -121,7 +131,16 @@ impl Queue {
         }
 
         if let Some(cur) = self.current {
-            if cur == 0 {
+            if self.shuffle {
+                match self.prev_shuffle_index(cur) {
+                    Some(prev) => self.current = Some(prev),
+                    None => {
+                        if self.repeat == RepeatMode::All {
+                            self.current = self.shuffle_order.last().copied();
+                        }
+                    }
+                }
+            } else if cur == 0 {
                 if self.repeat == RepeatMode::All {
                     self.current = Some(self.items.len() - 1);
                 }
@@ -182,17 +201,17 @@ impl Queue {
         }
     }
 
-    fn next_shuffle_index(&self, current: usize) -> usize {
-        if let Some(pos) = self.shuffle_order.iter().position(|&x| x == current) {
-            if pos + 1 < self.shuffle_order.len() {
-                self.shuffle_order[pos + 1]
-            } else {
-                self.items.len() // Signal end
-            }
-        } else if !self.shuffle_order.is_empty() {
-            self.shuffle_order[0]
+    fn next_shuffle_index(&self, current: usize) -> Option<usize> {
+        let pos = self.shuffle_order.iter().position(|&x| x == current)?;
+        self.shuffle_order.get(pos + 1).copied()
+    }
+
+    fn prev_shuffle_index(&self, current: usize) -> Option<usize> {
+        let pos = self.shuffle_order.iter().position(|&x| x == current)?;
+        if pos > 0 {
+            Some(self.shuffle_order[pos - 1])
         } else {
-            self.items.len()
+            None
         }
     }
 }
