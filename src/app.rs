@@ -68,6 +68,8 @@ pub struct App {
     pub recent_tracks: Vec<Item>,
     pub recent_state: ListState,
     pub recent_loaded: bool,
+    pub recent_search_active: bool,
+    pub recent_search_text: String,
 
     // Playlists
     pub playlists: Vec<Item>,
@@ -164,6 +166,8 @@ impl App {
             recent_tracks: Vec::new(),
             recent_state: ListState::default(),
             recent_loaded: false,
+            recent_search_active: false,
+            recent_search_text: String::new(),
 
             playlists: Vec::new(),
             playlist_state: ListState::default(),
@@ -390,6 +394,36 @@ impl App {
                 KeyCode::Char(c) => {
                     self.playlist_search_text.push(c);
                     self.jump_to_playlist_search();
+                }
+                _ => {}
+            }
+            return;
+        }
+
+        // Recent track search input mode (vim-like jump)
+        if self.recent_search_active {
+            match key.code {
+                KeyCode::Esc => {
+                    self.recent_search_active = false;
+                    self.recent_search_text.clear();
+                }
+                KeyCode::Enter => {
+                    self.recent_search_active = false;
+                    self.recent_search_text.clear();
+                }
+                KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.next_recent_search_match();
+                }
+                KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.prev_recent_search_match();
+                }
+                KeyCode::Backspace => {
+                    self.recent_search_text.pop();
+                    self.jump_to_recent_search();
+                }
+                KeyCode::Char(c) => {
+                    self.recent_search_text.push(c);
+                    self.jump_to_recent_search();
                 }
                 _ => {}
             }
@@ -805,16 +839,26 @@ impl App {
         }
     }
 
+    /// Smart case search: if query is all lowercase, match case-insensitively.
+    /// If query contains any uppercase, match exactly.
+    fn smart_contains(haystack: &str, query: &str) -> bool {
+        if query.chars().any(|c| c.is_uppercase()) {
+            haystack.contains(query)
+        } else {
+            haystack.to_lowercase().contains(query)
+        }
+    }
+
     fn rebuild_filter(&mut self) {
         if self.filter_text.is_empty() {
             self.filtered_artist_indices = (0..self.artists.len()).collect();
         } else {
-            let query = self.filter_text.to_lowercase();
+            let query = &self.filter_text;
             self.filtered_artist_indices = self
                 .artists
                 .iter()
                 .enumerate()
-                .filter(|(_, a)| a.name.to_lowercase().contains(&query))
+                .filter(|(_, a)| Self::smart_contains(&a.name, query))
                 .map(|(i, _)| i)
                 .collect();
         }
@@ -830,16 +874,16 @@ impl App {
     }
 
     fn playlist_track_matches_query(&self, track: &Item, query: &str) -> bool {
-        track.name.to_lowercase().contains(query)
-            || track.artist_display().to_lowercase().contains(query)
-            || track.album.as_deref().unwrap_or("").to_lowercase().contains(query)
+        Self::smart_contains(&track.name, query)
+            || Self::smart_contains(&track.artist_display(), query)
+            || Self::smart_contains(track.album.as_deref().unwrap_or(""), query)
     }
 
     fn jump_to_playlist_search(&mut self) {
         if self.playlist_search_text.is_empty() || self.playlist_tracks.is_empty() {
             return;
         }
-        let query = self.playlist_search_text.to_lowercase();
+        let query = self.playlist_search_text.clone();
         if let Some(idx) = self.playlist_tracks.iter().position(|t| {
             self.playlist_track_matches_query(t, &query)
         }) {
@@ -851,10 +895,9 @@ impl App {
         if self.playlist_search_text.is_empty() || self.playlist_tracks.is_empty() {
             return;
         }
-        let query = self.playlist_search_text.to_lowercase();
+        let query = self.playlist_search_text.clone();
         let cur = self.playlist_track_state.selected().unwrap_or(0);
         let len = self.playlist_tracks.len();
-        // Search forward from current+1, wrapping around
         for offset in 1..=len {
             let idx = (cur + offset) % len;
             if self.playlist_track_matches_query(&self.playlist_tracks[idx], &query) {
@@ -868,10 +911,9 @@ impl App {
         if self.playlist_search_text.is_empty() || self.playlist_tracks.is_empty() {
             return;
         }
-        let query = self.playlist_search_text.to_lowercase();
+        let query = self.playlist_search_text.clone();
         let cur = self.playlist_track_state.selected().unwrap_or(0);
         let len = self.playlist_tracks.len();
-        // Search backward from current-1, wrapping around
         for offset in 1..=len {
             let idx = (cur + len - offset) % len;
             if self.playlist_track_matches_query(&self.playlist_tracks[idx], &query) {
@@ -1190,7 +1232,61 @@ impl App {
                     }
                 }
             }
+            KeyCode::Char('/') => {
+                self.recent_search_active = true;
+                self.recent_search_text.clear();
+            }
             _ => {}
+        }
+    }
+
+    fn recent_track_matches_query(&self, track: &Item, query: &str) -> bool {
+        Self::smart_contains(&track.name, query)
+            || Self::smart_contains(&track.artist_display(), query)
+            || Self::smart_contains(track.album.as_deref().unwrap_or(""), query)
+    }
+
+    fn jump_to_recent_search(&mut self) {
+        if self.recent_search_text.is_empty() || self.recent_tracks.is_empty() {
+            return;
+        }
+        let query = self.recent_search_text.clone();
+        if let Some(idx) = self.recent_tracks.iter().position(|t| {
+            self.recent_track_matches_query(t, &query)
+        }) {
+            self.recent_state.select(Some(idx));
+        }
+    }
+
+    fn next_recent_search_match(&mut self) {
+        if self.recent_search_text.is_empty() || self.recent_tracks.is_empty() {
+            return;
+        }
+        let query = self.recent_search_text.clone();
+        let cur = self.recent_state.selected().unwrap_or(0);
+        let len = self.recent_tracks.len();
+        for offset in 1..=len {
+            let idx = (cur + offset) % len;
+            if self.recent_track_matches_query(&self.recent_tracks[idx], &query) {
+                self.recent_state.select(Some(idx));
+                return;
+            }
+        }
+    }
+
+    fn prev_recent_search_match(&mut self) {
+        if self.recent_search_text.is_empty() || self.recent_tracks.is_empty() {
+            return;
+        }
+        let query = self.recent_search_text.clone();
+        let cur = self.recent_state.selected().unwrap_or(0);
+        let len = self.recent_tracks.len();
+        for offset in 1..=len {
+            let idx = (cur + len - offset) % len;
+            if self.recent_track_matches_query(&self.recent_tracks[idx], &query) {
+                self.recent_state.select(Some(idx));
+                return;
+            }
         }
     }
 
@@ -1527,9 +1623,9 @@ impl App {
         if self.add_to_playlist_search_text.is_empty() || self.playlists.is_empty() {
             return;
         }
-        let query = self.add_to_playlist_search_text.to_lowercase();
+        let query = &self.add_to_playlist_search_text;
         if let Some(idx) = self.playlists.iter().position(|pl| {
-            pl.name.to_lowercase().contains(&query)
+            Self::smart_contains(&pl.name, query)
         }) {
             self.add_to_playlist_state.select(Some(idx));
         }
@@ -1539,12 +1635,12 @@ impl App {
         if self.add_to_playlist_search_text.is_empty() || self.playlists.is_empty() {
             return;
         }
-        let query = self.add_to_playlist_search_text.to_lowercase();
+        let query = self.add_to_playlist_search_text.clone();
         let cur = self.add_to_playlist_state.selected().unwrap_or(0);
         let len = self.playlists.len();
         for offset in 1..=len {
             let idx = (cur + offset) % len;
-            if self.playlists[idx].name.to_lowercase().contains(&query) {
+            if Self::smart_contains(&self.playlists[idx].name, &query) {
                 self.add_to_playlist_state.select(Some(idx));
                 return;
             }
@@ -1555,12 +1651,12 @@ impl App {
         if self.add_to_playlist_search_text.is_empty() || self.playlists.is_empty() {
             return;
         }
-        let query = self.add_to_playlist_search_text.to_lowercase();
+        let query = self.add_to_playlist_search_text.clone();
         let cur = self.add_to_playlist_state.selected().unwrap_or(0);
         let len = self.playlists.len();
         for offset in 1..=len {
             let idx = (cur + len - offset) % len;
-            if self.playlists[idx].name.to_lowercase().contains(&query) {
+            if Self::smart_contains(&self.playlists[idx].name, &query) {
                 self.add_to_playlist_state.select(Some(idx));
                 return;
             }

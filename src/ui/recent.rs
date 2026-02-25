@@ -87,7 +87,9 @@ pub fn render(frame: &mut Frame, app: &mut App, area: Rect) {
         .collect();
 
     let count = app.recent_tracks.len();
-    let title = if let Some((s, e)) = visual_range {
+    let title = if app.recent_search_active {
+        format!(" Recent ({count}) /{}_ ", app.recent_search_text)
+    } else if let Some((s, e)) = visual_range {
         format!(" Recent ({count}) -- VISUAL {} selected ", e - s + 1)
     } else {
         format!(" Recent ({count}) ")
