@@ -92,6 +92,8 @@ pub struct App {
     pub add_to_playlist_popup: bool,
     pub add_to_playlist_items: Vec<Item>,
     pub add_to_playlist_state: ListState,
+    pub add_to_playlist_search_active: bool,
+    pub add_to_playlist_search_text: String,
 
     // Player
     pub queue: Queue,
@@ -182,6 +184,8 @@ impl App {
             add_to_playlist_popup: false,
             add_to_playlist_items: Vec::new(),
             add_to_playlist_state: ListState::default(),
+            add_to_playlist_search_active: false,
+            add_to_playlist_search_text: String::new(),
 
             queue: Queue::new(),
             player_state: PlayerState::default(),
@@ -1438,6 +1442,36 @@ impl App {
     }
 
     async fn handle_add_to_playlist_key(&mut self, key: KeyEvent) {
+        // Search mode within the add-to-playlist popup
+        if self.add_to_playlist_search_active {
+            match key.code {
+                KeyCode::Esc => {
+                    self.add_to_playlist_search_active = false;
+                    self.add_to_playlist_search_text.clear();
+                }
+                KeyCode::Enter => {
+                    self.add_to_playlist_search_active = false;
+                    self.add_to_playlist_search_text.clear();
+                }
+                KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.next_add_to_playlist_search_match();
+                }
+                KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.prev_add_to_playlist_search_match();
+                }
+                KeyCode::Backspace => {
+                    self.add_to_playlist_search_text.pop();
+                    self.jump_to_add_to_playlist_search();
+                }
+                KeyCode::Char(c) => {
+                    self.add_to_playlist_search_text.push(c);
+                    self.jump_to_add_to_playlist_search();
+                }
+                _ => {}
+            }
+            return;
+        }
+
         match key.code {
             KeyCode::Esc => {
                 self.add_to_playlist_popup = false;
@@ -1453,6 +1487,10 @@ impl App {
             KeyCode::Char('k') | KeyCode::Up => {
                 let i = self.add_to_playlist_state.selected().unwrap_or(0);
                 self.add_to_playlist_state.select(Some(i.saturating_sub(1)));
+            }
+            KeyCode::Char('/') => {
+                self.add_to_playlist_search_active = true;
+                self.add_to_playlist_search_text.clear();
             }
             KeyCode::Enter => {
                 if let Some(idx) = self.add_to_playlist_state.selected() {
@@ -1482,6 +1520,50 @@ impl App {
                 self.add_to_playlist_items.clear();
             }
             _ => {}
+        }
+    }
+
+    fn jump_to_add_to_playlist_search(&mut self) {
+        if self.add_to_playlist_search_text.is_empty() || self.playlists.is_empty() {
+            return;
+        }
+        let query = self.add_to_playlist_search_text.to_lowercase();
+        if let Some(idx) = self.playlists.iter().position(|pl| {
+            pl.name.to_lowercase().contains(&query)
+        }) {
+            self.add_to_playlist_state.select(Some(idx));
+        }
+    }
+
+    fn next_add_to_playlist_search_match(&mut self) {
+        if self.add_to_playlist_search_text.is_empty() || self.playlists.is_empty() {
+            return;
+        }
+        let query = self.add_to_playlist_search_text.to_lowercase();
+        let cur = self.add_to_playlist_state.selected().unwrap_or(0);
+        let len = self.playlists.len();
+        for offset in 1..=len {
+            let idx = (cur + offset) % len;
+            if self.playlists[idx].name.to_lowercase().contains(&query) {
+                self.add_to_playlist_state.select(Some(idx));
+                return;
+            }
+        }
+    }
+
+    fn prev_add_to_playlist_search_match(&mut self) {
+        if self.add_to_playlist_search_text.is_empty() || self.playlists.is_empty() {
+            return;
+        }
+        let query = self.add_to_playlist_search_text.to_lowercase();
+        let cur = self.add_to_playlist_state.selected().unwrap_or(0);
+        let len = self.playlists.len();
+        for offset in 1..=len {
+            let idx = (cur + len - offset) % len;
+            if self.playlists[idx].name.to_lowercase().contains(&query) {
+                self.add_to_playlist_state.select(Some(idx));
+                return;
+            }
         }
     }
 

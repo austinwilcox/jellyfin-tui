@@ -159,7 +159,9 @@ pub fn render_add_to_playlist_popup(frame: &mut Frame, app: &mut App, area: Rect
     use ratatui::widgets::Clear;
 
     let count = app.add_to_playlist_items.len();
-    let title = if count > 1 {
+    let title = if app.add_to_playlist_search_active {
+        format!(" /{}_ ", app.add_to_playlist_search_text)
+    } else if count > 1 {
         format!(" Add {count} tracks to Playlist ")
     } else {
         " Add to Playlist ".to_string()
