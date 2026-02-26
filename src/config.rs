@@ -216,3 +216,33 @@ impl ServerEntry {
         &self.server_url
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PlaybackState {
+    pub item_id: String,
+    pub position_secs: f64,
+}
+
+pub fn state_path() -> Result<PathBuf> {
+    let config_dir = dirs::config_dir()
+        .context("Could not determine config directory")?
+        .join("jellyfin-tui");
+    fs::create_dir_all(&config_dir)?;
+    Ok(config_dir.join("state.toml"))
+}
+
+pub fn save_playback_state(state: &PlaybackState) -> Result<()> {
+    let path = state_path()?;
+    let contents = toml::to_string_pretty(state)?;
+    fs::write(&path, contents)?;
+    Ok(())
+}
+
+pub fn load_playback_state() -> Option<PlaybackState> {
+    let path = state_path().ok()?;
+    if !path.exists() {
+        return None;
+    }
+    let contents = fs::read_to_string(&path).ok()?;
+    toml::from_str(&contents).ok()
+}

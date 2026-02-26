@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 
 use crate::client::api::JellyfinClient;
 use crate::client::models::Item;
+use crate::config::{load_playback_state, save_playback_state, PlaybackState};
 use crate::player::media_controls::{self, MediaEvent};
 use crate::player::mpv::{spawn_player_thread, PlayerCommand, PlayerState};
 use crate::player::queue::Queue;
@@ -216,6 +217,17 @@ impl App {
         // Load artists on startup
         self.load_artists().await;
 
+        // Restore last playback position if available
+        if let Some(state) = load_playback_state() {
+            if let Ok(item) = self.client.get_item_by_id(&state.item_id).await {
+                let url = self.client.stream_url(&item.id);
+                self.queue.replace(vec![item.clone()], 0);
+                self.queue_state.select(Some(0));
+                let _ = self.player_cmd_tx.send(PlayerCommand::PlayPausedAt(url, state.position_secs));
+                self.update_media_metadata(&item);
+            }
+        }
+
         let tick_rate = Duration::from_millis(100);
         let mut last_tick = Instant::now();
         let mut last_keepalive = Instant::now();
@@ -308,6 +320,21 @@ impl App {
                         }
                     }
                 }
+            }
+        }
+
+        // Drain final player state updates so position is current
+        while let Ok(state) = self.player_state_rx.try_recv() {
+            self.player_state = state;
+        }
+
+        // Save playback state before quitting
+        if let Some(item) = self.queue.current_item() {
+            if self.player_state.playing || self.player_state.paused {
+                let _ = save_playback_state(&PlaybackState {
+                    item_id: item.id.clone(),
+                    position_secs: self.player_state.position,
+                });
             }
         }
 

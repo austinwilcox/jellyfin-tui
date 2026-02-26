@@ -17,6 +17,7 @@ pub enum PlayerCommand {
     Pause,
     Resume,
     TogglePause,
+    PlayPausedAt(String, f64), // URL, position in seconds — load paused at position
     Stop,
     SeekForward(f64),
     SeekBackward(f64),
@@ -111,18 +112,36 @@ fn run_player(
     ev_ctx.enable_all_events().map_err(mpv_err)?;
 
     let mut sys_vol_tick: u32 = 0;
+    let mut pending_seek: Option<f64> = None;
 
     loop {
         // Process commands (non-blocking)
         while let Ok(cmd) = cmd_rx.try_recv() {
             match cmd {
                 PlayerCommand::Play(url) => {
+                    mpv.set_property("pause", false).map_err(mpv_err)?;
+                    pending_seek = None;
                     match mpv.command("loadfile", &[&url, "replace"]) {
                         Ok(_) => {
                             state.playing = true;
                             state.paused = false;
                             state.finished = false;
                             state.position = 0.0;
+                        }
+                        Err(e) => {
+                            eprintln!("mpv loadfile error: {e}");
+                        }
+                    }
+                }
+                PlayerCommand::PlayPausedAt(url, pos) => {
+                    mpv.set_property("pause", true).map_err(mpv_err)?;
+                    match mpv.command("loadfile", &[&url, "replace"]) {
+                        Ok(_) => {
+                            state.playing = true;
+                            state.paused = true;
+                            state.finished = false;
+                            state.position = pos;
+                            pending_seek = Some(pos);
                         }
                         Err(e) => {
                             eprintln!("mpv loadfile error: {e}");
@@ -145,6 +164,7 @@ fn run_player(
                     }
                 }
                 PlayerCommand::Stop => {
+                    pending_seek = None;
                     mpv.command("stop", &[]).map_err(mpv_err)?;
                     state.playing = false;
                     state.paused = false;
@@ -198,6 +218,14 @@ fn run_player(
         }
         if let Ok(vol) = mpv.get_property::<i64>("volume") {
             state.volume = vol;
+        }
+
+        // Apply deferred seek once the file is loaded (duration becomes available)
+        if let Some(seek_pos) = pending_seek {
+            if state.duration > 0.0 {
+                let _ = mpv.command("seek", &[&seek_pos.to_string(), "absolute"]);
+                pending_seek = None;
+            }
         }
 
         // Read system volume every ~2 seconds (40 * 50ms)

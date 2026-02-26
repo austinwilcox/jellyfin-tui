@@ -289,6 +289,22 @@ impl JellyfinClient {
         Ok(())
     }
 
+    pub async fn get_item_by_id(&self, item_id: &str) -> Result<Item> {
+        let url = format!(
+            "{}/Users/{}/Items/{}?Fields=Artists,Album,RunTimeTicks,IndexNumber,ParentIndexNumber,AlbumArtist,ProductionYear,MediaSources",
+            self.base_url, self.user_id, item_id
+        );
+        let item: Item = self
+            .client
+            .get(&url)
+            .header("Authorization", self.auth_header())
+            .send()
+            .await?
+            .json()
+            .await?;
+        Ok(item)
+    }
+
     pub fn stream_url(&self, item_id: &str) -> String {
         format!(
             "{}/Audio/{}/stream?static=true&api_key={}",
