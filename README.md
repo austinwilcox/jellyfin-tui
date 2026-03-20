@@ -198,6 +198,31 @@ Hardware media keys (from headphones, Bluetooth devices, or keyboard) are suppor
 - **macOS** -- Uses the MediaPlayer framework (`MPRemoteCommandCenter`). Play/pause, next, and previous are supported. Track metadata appears in the macOS Now Playing widget.
 - **Linux** -- Uses MPRIS over D-Bus. Compatible with desktop environments and media key daemons that support MPRIS.
 
+### i3 Window Manager
+
+i3 does not automatically route media keys to MPRIS. You need `playerctl` and a few bindings in your i3 config.
+
+Install `playerctl`:
+
+```bash
+# Arch
+sudo pacman -S playerctl
+
+# Debian/Ubuntu
+sudo apt install playerctl
+```
+
+Add to `~/.config/i3/config` (near your existing volume bindings):
+
+```
+# Media playback controls (requires playerctl)
+bindsym XF86AudioPlay exec --no-startup-id playerctl play-pause
+bindsym XF86AudioNext exec --no-startup-id playerctl next
+bindsym XF86AudioPrev exec --no-startup-id playerctl previous
+```
+
+Reload i3 with `$mod+Shift+r` to apply.
+
 ## Jellyfin Server Requirements
 
 - Jellyfin server with a **Music** library configured
