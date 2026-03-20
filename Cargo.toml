@@ -3,6 +3,8 @@ name = "jellyfin-tui"
 version = "0.2.3"
 edition = "2021"
 license = "MIT"
+description = "A TUI music player for Jellyfin"
+repository = "https://github.com/austinwilcox/jellyfin-tui"
 
 [dependencies]
 ratatui = "0.29"
