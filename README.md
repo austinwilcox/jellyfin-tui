@@ -1,5 +1,7 @@
 # jellyfin-tui
 
+[![Publish to crates.io](https://github.com/austinwilcox/jellyfin-tui/actions/workflows/publish.yml/badge.svg)](https://github.com/austinwilcox/jellyfin-tui/actions/workflows/publish.yml)
+
 A terminal-based music player for [Jellyfin](https://jellyfin.org) media servers, built with Rust.
 
 Browse your library, search for music, manage playlists, and control playback entirely from the terminal with vim-style keybindings. Supports media key controls (play/pause/next/previous) from headphones and keyboards on macOS and Linux.
