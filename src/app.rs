@@ -1,5 +1,5 @@
 use anyhow::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers, MediaKeyCode};
 use ratatui::widgets::ListState;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
@@ -562,24 +562,31 @@ impl App {
                 return;
             }
             // Playback controls (global)
-            KeyCode::Char(' ') => {
+            KeyCode::Char(' ')
+            | KeyCode::Media(MediaKeyCode::Play)
+            | KeyCode::Media(MediaKeyCode::Pause)
+            | KeyCode::Media(MediaKeyCode::PlayPause) => {
                 let _ = self.player_cmd_tx.send(PlayerCommand::TogglePause);
                 return;
             }
-            KeyCode::Char('n') => {
+            KeyCode::Media(MediaKeyCode::Stop) => {
+                let _ = self.player_cmd_tx.send(PlayerCommand::TogglePause);
+                return;
+            }
+            KeyCode::Char('n') | KeyCode::Media(MediaKeyCode::TrackNext) => {
                 self.play_next();
                 return;
             }
-            KeyCode::Char('N') => {
+            KeyCode::Char('N') | KeyCode::Media(MediaKeyCode::TrackPrevious) => {
                 self.play_prev();
                 return;
             }
-            KeyCode::Char('+') | KeyCode::Char('=') => {
+            KeyCode::Char('+') | KeyCode::Char('=') | KeyCode::Media(MediaKeyCode::RaiseVolume) => {
                 let vol = (self.player_state.volume + 5).min(100);
                 let _ = self.player_cmd_tx.send(PlayerCommand::SetVolume(vol));
                 return;
             }
-            KeyCode::Char('-') => {
+            KeyCode::Char('-') | KeyCode::Media(MediaKeyCode::LowerVolume) => {
                 let vol = (self.player_state.volume - 5).max(0);
                 let _ = self.player_cmd_tx.send(PlayerCommand::SetVolume(vol));
                 return;
