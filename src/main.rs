@@ -7,7 +7,7 @@ mod ui;
 
 use anyhow::Result;
 
-use crate::client::JellyfinClient;
+use crate::client::SubsonicClient;
 use crate::config::{config_path, load_config, prompt_config, select_server, get_server_config, save_multi_config};
 
 #[tokio::main]
@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
             }
             _ => {
                 eprintln!("Unknown command: {cmd}");
-                eprintln!("Usage: jellyfin-tui [config]");
+                eprintln!("Usage: navidrome-tui [config]");
                 std::process::exit(1);
             }
         }
@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
             (multi, name)
         }
         None => {
-            println!("Welcome to jellyfin-tui! Let's set up your connection.");
+            println!("Welcome to navidrome-tui! Let's set up your connection.");
             println!();
             prompt_config()?
         }
@@ -58,7 +58,7 @@ async fn main() -> Result<()> {
     save_multi_config(&multi)?;
 
     // Create API client
-    let api_client = JellyfinClient::new(&cfg)?;
+    let api_client = SubsonicClient::new(&cfg)?;
 
     // Initialize TUI
     let mut terminal = tui::init()?;

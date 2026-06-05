@@ -4,7 +4,7 @@ use ratatui::widgets::ListState;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
-use crate::client::api::JellyfinClient;
+use crate::client::api::SubsonicClient;
 use crate::client::models::Item;
 use crate::config::{load_playback_state, save_playback_state, PlaybackState};
 use crate::player::media_controls::{self, MediaEvent};
@@ -104,7 +104,7 @@ pub struct App {
     player_cmd_tx: mpsc::Sender<PlayerCommand>,
 
     // Client
-    client: JellyfinClient,
+    client: SubsonicClient,
 
     // Status
     pub status_message: Option<String>,
@@ -125,7 +125,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(client: JellyfinClient) -> Self {
+    pub fn new(client: SubsonicClient) -> Self {
         let (cmd_tx, cmd_rx) = mpsc::channel();
         let (state_tx, state_rx) = tokio::sync::mpsc::unbounded_channel();
 

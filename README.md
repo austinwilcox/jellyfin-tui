@@ -1,8 +1,8 @@
-# jellyfin-tui
+# navidrome-tui
 
-[![Publish to crates.io](https://github.com/austinwilcox/jellyfin-tui/actions/workflows/publish.yml/badge.svg)](https://github.com/austinwilcox/jellyfin-tui/actions/workflows/publish.yml)
+A terminal-based music player for [Navidrome](https://www.navidrome.org/) (and other Subsonic-compatible) servers, built with Rust.
 
-A terminal-based music player for [Jellyfin](https://jellyfin.org) media servers, built with Rust.
+Forked from [jellyfin-tui](https://github.com/austinwilcox/jellyfin-tui) — same TUI, same keybindings, talks to the Subsonic API instead.
 
 Browse your library, search for music, manage playlists, and control playback entirely from the terminal with vim-style keybindings. Supports media key controls (play/pause/next/previous) from headphones and keyboards on macOS and Linux.
 
@@ -17,8 +17,8 @@ Browse your library, search for music, manage playlists, and control playback en
 - **Media key support** -- Play/pause/next/previous from headphones and keyboard media keys via MPRIS (Linux) and MediaPlayer framework (macOS)
 - **Now playing bar** -- Always-visible bar with track info, time, codec/bitrate (e.g. `FLAC @ 1411 kbps`), volume, and repeat/shuffle status
 - **Scrolling text** -- Long track/artist names scroll automatically when they don't fit in the available space
-- **Multi-server support** -- Configure multiple Jellyfin servers and switch between them
-- **Session keep-alive** -- Automatically keeps the server session alive during long listening sessions
+- **Multi-server support** -- Configure multiple Navidrome/Subsonic servers and switch between them
+- **Session keep-alive** -- Periodically pings the server to surface auth/connection issues early
 
 ## Dependencies
 
@@ -58,24 +58,24 @@ sudo pacman -S mpv dbus openssl pkg-config
 ## Building
 
 ```bash
-git clone https://github.com/your-username/jellyfin-tui.git
-cd jellyfin-tui
+git clone https://github.com/your-username/navidrome-tui.git
+cd navidrome-tui
 cargo build --release
 ```
 
-The binary will be at `target/release/jellyfin-tui`.
+The binary will be at `target/release/navidrome-tui`.
 
 ## Configuration
 
-On first run, the app will prompt you for your Jellyfin server details:
+On first run, the app will prompt you for your Navidrome server details:
 
 ```
-Jellyfin server URL (e.g. http://localhost:8096):
+Navidrome server URL (e.g. http://localhost:4533):
 Username:
 Password:
 ```
 
-Configuration is stored at `~/.config/jellyfin-tui/config.toml`. After initial authentication, the app stores a session token and will reuse it on subsequent launches.
+Configuration is stored at `~/.config/navidrome-tui/config.toml`. The password is stored in plaintext and used to compute a per-request salted MD5 token (Subsonic's standard auth scheme); no long-lived session token is kept on disk.
 
 ### Multi-server
 
@@ -86,13 +86,13 @@ active = "home"
 
 [[servers]]
 name = "home"
-server_url = "http://192.168.1.10:8096"
+server_url = "http://192.168.1.10:4533"
 username = "alice"
 password = "password"
 
 [[servers]]
 name = "remote"
-server_url = "https://jellyfin.example.com"
+server_url = "https://navidrome.example.com"
 username = "alice"
 password = "password"
 ```
@@ -104,7 +104,7 @@ Old single-server configs are automatically migrated to the new format.
 Run the app:
 
 ```bash
-jellyfin-tui
+navidrome-tui
 ```
 
 Or if running from the source directory:
@@ -118,7 +118,7 @@ cargo run --release
 To open the config file in your default editor (`$EDITOR`):
 
 ```bash
-jellyfin-tui config
+navidrome-tui config
 ```
 
 ### Tabs
@@ -223,11 +223,13 @@ bindsym XF86AudioPrev exec --no-startup-id playerctl previous
 
 Reload i3 with `$mod+Shift+r` to apply.
 
-## Jellyfin Server Requirements
+## Server Requirements
 
-- Jellyfin server with a **Music** library configured
-- A valid user account with access to the music library
+- A [Navidrome](https://www.navidrome.org/) server (or any server implementing the [Subsonic API](http://www.subsonic.org/pages/api.jsp) at v1.16.1)
+- A valid user account
 - The server must be reachable over HTTP/HTTPS from the machine running the TUI
+
+The app uses these Subsonic endpoints: `ping`, `getArtists`, `getArtist`, `getAlbum`, `search3`, `getAlbumList2`, `getPlaylists`, `getPlaylist`, `createPlaylist`, `updatePlaylist`, `deletePlaylist`, `getSong`, `stream`.
 
 ## License
 

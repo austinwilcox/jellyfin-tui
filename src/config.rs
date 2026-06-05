@@ -62,7 +62,7 @@ impl From<&ServerEntry> for Config {
 pub fn config_path() -> Result<PathBuf> {
     let config_dir = dirs::config_dir()
         .context("Could not determine config directory")?
-        .join("jellyfin-tui");
+        .join("navidrome-tui");
     fs::create_dir_all(&config_dir)?;
     Ok(config_dir.join("config.toml"))
 }
@@ -173,7 +173,7 @@ pub fn prompt_config() -> Result<(MultiServerConfig, String)> {
         if trimmed.is_empty() { "default".to_string() } else { trimmed.to_string() }
     };
 
-    print!("Jellyfin server URL (e.g. http://localhost:8096): ");
+    print!("Navidrome server URL (e.g. http://localhost:4533): ");
     io::stdout().flush()?;
     input.clear();
     io::stdin().read_line(&mut input)?;
@@ -206,7 +206,7 @@ pub fn prompt_config() -> Result<(MultiServerConfig, String)> {
     };
 
     save_multi_config(&multi)?;
-    println!("Config saved to ~/.config/jellyfin-tui/config.toml");
+    println!("Config saved to ~/.config/navidrome-tui/config.toml");
 
     Ok((multi, name))
 }
@@ -226,7 +226,7 @@ pub struct PlaybackState {
 pub fn state_path() -> Result<PathBuf> {
     let config_dir = dirs::config_dir()
         .context("Could not determine config directory")?
-        .join("jellyfin-tui");
+        .join("navidrome-tui");
     fs::create_dir_all(&config_dir)?;
     Ok(config_dir.join("state.toml"))
 }

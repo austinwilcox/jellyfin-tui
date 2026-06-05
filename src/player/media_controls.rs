@@ -13,8 +13,8 @@ pub fn init_media_controls(
     event_tx: tokio::sync::mpsc::UnboundedSender<MediaEvent>,
 ) -> Option<MediaControls> {
     let config = PlatformConfig {
-        dbus_name: "jellyfin_tui",
-        display_name: "jellyfin-tui",
+        dbus_name: "navidrome_tui",
+        display_name: "navidrome-tui",
         hwnd: None,
     };
 

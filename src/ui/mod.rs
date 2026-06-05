@@ -58,7 +58,7 @@ fn render_tab_bar(frame: &mut Frame, app: &App, area: ratatui::layout::Rect) {
 
     let mut spans = vec![
         Span::styled(
-            " jellyfin-tui ",
+            " navidrome-tui ",
             Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
         ),
         Span::raw("  "),

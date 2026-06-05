@@ -1,10 +1,10 @@
 [package]
-name = "jellyfin-tui"
+name = "navidrome-tui"
 version = "0.5.0"
 edition = "2021"
 license = "MIT"
-description = "A TUI music player for Jellyfin"
-repository = "https://github.com/austinwilcox/jellyfin-tui"
+description = "A TUI music player for Navidrome (Subsonic API)"
+repository = "https://github.com/austinwilcox/navidrome-tui"
 
 [dependencies]
 ratatui = "0.29"
@@ -21,3 +21,4 @@ uuid = { version = "1", features = ["v4"] }
 rand = "0.8"
 souvlaki = "0.7"
 unicode-width = "0.2"
+md5 = "0.7"
