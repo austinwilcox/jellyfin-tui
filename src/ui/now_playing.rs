@@ -49,6 +49,24 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
             track_spans.push(Span::raw("  "));
             track_spans.push(Span::styled(codec, Style::default().fg(Color::DarkGray)));
         }
+
+        // Favorite indicator
+        track_spans.push(Span::raw("  "));
+        if track.starred {
+            track_spans.push(Span::styled(
+                "♥",
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            ));
+        } else {
+            track_spans.push(Span::styled("♡", Style::default().fg(Color::DarkGray)));
+        }
+
+        // Star rating: filled stars then empty, padded to 5
+        let r = track.user_rating.min(5) as usize;
+        let stars = format!(" {}{}", "★".repeat(r), "☆".repeat(5 - r));
+        let star_color = if r > 0 { Color::Yellow } else { Color::DarkGray };
+        track_spans.push(Span::styled(stars, Style::default().fg(star_color)));
+
         track_spans
     } else {
         vec![Span::styled(

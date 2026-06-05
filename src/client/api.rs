@@ -257,6 +257,28 @@ impl SubsonicClient {
         Ok(())
     }
 
+    /// Star (favorite) a song by ID.
+    pub async fn star_song(&self, item_id: &str) -> Result<()> {
+        let params = format!("id={}", url_encode(item_id));
+        let _: EmptyPayload = self.get_json("star.view", &params).await?;
+        Ok(())
+    }
+
+    /// Unstar a song by ID.
+    pub async fn unstar_song(&self, item_id: &str) -> Result<()> {
+        let params = format!("id={}", url_encode(item_id));
+        let _: EmptyPayload = self.get_json("unstar.view", &params).await?;
+        Ok(())
+    }
+
+    /// Set a song's rating (0..=5). 0 clears the rating.
+    pub async fn set_rating(&self, item_id: &str, rating: u8) -> Result<()> {
+        let r = rating.min(5);
+        let params = format!("id={}&rating={r}", url_encode(item_id));
+        let _: EmptyPayload = self.get_json("setRating.view", &params).await?;
+        Ok(())
+    }
+
     pub async fn get_item_by_id(&self, item_id: &str) -> Result<Item> {
         let params = format!("id={}", url_encode(item_id));
         let payload: SongPayload = self.get_json("getSong.view", &params).await?;

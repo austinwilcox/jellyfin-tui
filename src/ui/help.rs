@@ -32,12 +32,18 @@ const HELP_TEXT: &[(&str, &str)] = &[
     ("c", "Clear queue"),
     ("C", "Create playlist"),
     ("D", "Delete playlist"),
+    ("", ""),
+    ("Favorites & Ratings", ""),
+    ("f", "Toggle favorite (selected or now-playing)"),
+    ("Ctrl+1..5", "Set rating 1–5"),
+    ("`", "Clear rating"),
+    ("", ""),
     ("q", "Quit"),
     ("?", "Toggle this help"),
 ];
 
 pub fn render(frame: &mut Frame, area: Rect) {
-    let popup_width = 50u16.min(area.width.saturating_sub(4));
+    let popup_width = 56u16.min(area.width.saturating_sub(4));
     let popup_height = (HELP_TEXT.len() as u16 + 2).min(area.height.saturating_sub(4));
 
     let [popup_area] = Layout::horizontal([Constraint::Length(popup_width)])

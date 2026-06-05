@@ -30,6 +30,10 @@ pub struct Item {
     pub container: Option<String>,
     /// Bitrate in kbps, if known.
     pub bitrate_kbps: Option<u64>,
+    /// True if the user has starred (favorited) this item.
+    pub starred: bool,
+    /// User rating 0..=5 (0 = unrated).
+    pub user_rating: u8,
 }
 
 impl Item {
@@ -128,6 +132,11 @@ pub struct Song {
     pub created: Option<String>,
     #[serde(default)]
     pub disc_number: Option<u32>,
+    /// Starred timestamp (ISO-8601). Presence = favorited.
+    #[serde(default)]
+    pub starred: Option<String>,
+    #[serde(default)]
+    pub user_rating: Option<u8>,
 }
 
 impl Song {
@@ -150,6 +159,8 @@ impl Song {
             date_created: self.created,
             container: self.suffix,
             bitrate_kbps: self.bit_rate,
+            starred: self.starred.is_some(),
+            user_rating: self.user_rating.unwrap_or(0).min(5),
         }
     }
 }
@@ -176,6 +187,10 @@ pub struct Album {
     pub duration: Option<u64>,
     #[serde(default, rename = "song")]
     pub songs: Option<Vec<Song>>,
+    #[serde(default)]
+    pub starred: Option<String>,
+    #[serde(default)]
+    pub user_rating: Option<u8>,
 }
 
 impl Album {
@@ -197,6 +212,8 @@ impl Album {
             date_created: self.created,
             container: None,
             bitrate_kbps: None,
+            starred: self.starred.is_some(),
+            user_rating: self.user_rating.unwrap_or(0).min(5),
         }
     }
 }

@@ -488,7 +488,7 @@ impl App {
                 self.show_help = true;
                 return;
             }
-            KeyCode::Char('1') => {
+            KeyCode::Char('1') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.active_tab = Tab::Library;
                 self.visual_mode = false;
                 self.visual_anchor = None;
@@ -497,20 +497,20 @@ impl App {
                 }
                 return;
             }
-            KeyCode::Char('2') => {
+            KeyCode::Char('2') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.active_tab = Tab::Search;
                 self.visual_mode = false;
                 self.visual_anchor = None;
                 self.search_focused = true;
                 return;
             }
-            KeyCode::Char('3') => {
+            KeyCode::Char('3') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.active_tab = Tab::Queue;
                 self.visual_mode = false;
                 self.visual_anchor = None;
                 return;
             }
-            KeyCode::Char('4') => {
+            KeyCode::Char('4') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.active_tab = Tab::Recent;
                 self.visual_mode = false;
                 self.visual_anchor = None;
@@ -519,7 +519,7 @@ impl App {
                 }
                 return;
             }
-            KeyCode::Char('5') => {
+            KeyCode::Char('5') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.active_tab = Tab::Playlists;
                 self.visual_mode = false;
                 self.visual_anchor = None;
@@ -605,6 +605,20 @@ impl App {
             }
             KeyCode::Char('s') => {
                 self.queue.toggle_shuffle();
+                return;
+            }
+            // Favorite / rating for the selected (or now-playing) track
+            KeyCode::Char('f') => {
+                self.toggle_favorite_target().await;
+                return;
+            }
+            KeyCode::Char('`') => {
+                self.set_rating_target(0).await;
+                return;
+            }
+            KeyCode::Char(c @ ('1'..='5')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                let r = (c as u8) - b'0';
+                self.set_rating_target(r).await;
                 return;
             }
             KeyCode::Tab => {
@@ -1693,6 +1707,76 @@ impl App {
             if Self::smart_contains(&self.playlists[idx].name, &query) {
                 self.add_to_playlist_state.select(Some(idx));
                 return;
+            }
+        }
+    }
+
+    /// Pick the track that favorite/rating actions should target:
+    /// the focused track in a list if any, otherwise the now-playing track.
+    fn favorite_target(&self) -> Option<Item> {
+        self.get_selected_audio_item()
+            .or_else(|| self.queue.current_item().cloned())
+    }
+
+    /// Update favorite/rating state for every in-memory copy of `id`.
+    fn update_item_flags<F: Fn(&mut Item)>(&mut self, id: &str, apply: F) {
+        let update = |list: &mut [Item]| {
+            for it in list.iter_mut() {
+                if it.id == id {
+                    apply(it);
+                }
+            }
+        };
+        update(&mut self.tracks);
+        update(&mut self.search_results);
+        update(&mut self.recent_tracks);
+        update(&mut self.playlist_tracks);
+        update(&mut self.queue.items);
+    }
+
+    async fn toggle_favorite_target(&mut self) {
+        let target = match self.favorite_target() {
+            Some(t) => t,
+            None => return,
+        };
+        let want_starred = !target.starred;
+        let result = if want_starred {
+            self.client.star_song(&target.id).await
+        } else {
+            self.client.unstar_song(&target.id).await
+        };
+        match result {
+            Ok(()) => {
+                self.update_item_flags(&target.id, |it| it.starred = want_starred);
+                self.status_message = Some(if want_starred {
+                    format!("★ Favorited: {}", target.name)
+                } else {
+                    format!("Unfavorited: {}", target.name)
+                });
+            }
+            Err(e) => {
+                self.status_message = Some(format!("Favorite failed: {e}"));
+            }
+        }
+    }
+
+    async fn set_rating_target(&mut self, rating: u8) {
+        let target = match self.favorite_target() {
+            Some(t) => t,
+            None => return,
+        };
+        let r = rating.min(5);
+        match self.client.set_rating(&target.id, r).await {
+            Ok(()) => {
+                self.update_item_flags(&target.id, |it| it.user_rating = r);
+                self.status_message = Some(if r == 0 {
+                    format!("Cleared rating: {}", target.name)
+                } else {
+                    format!("Rated {}★: {}", r, target.name)
+                });
+            }
+            Err(e) => {
+                self.status_message = Some(format!("Rating failed: {e}"));
             }
         }
     }
